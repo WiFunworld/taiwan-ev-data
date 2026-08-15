@@ -276,6 +276,7 @@
     }
     .ev-badge-dc { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
     .ev-badge-ac { background: #dcfce7; color: #16a34a; border: 1px solid #86efac; }
+    .ev-badge-gogoro { background: #e0f7fa; color: #00838f; border: 1px solid #80deea; font-weight: bold; }
     .ev-badge-highway { background: #fff1f2; color: #e11d48; border: 1px solid #fda4af; }
     .ev-badge-hotel { background: #f3e8ff; color: #7e22ce; border: 1px solid #d8b4fe; }
     .ev-badge-city { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
@@ -352,8 +353,19 @@
 
   <!-- 站點場域 List 選擇器與複合篩選面版 -->
   <div class="ev-map-controls-panel">
-    <!-- 第一行：List 下拉選單 (都市 / 國道 / 飯店) -->
+    <!-- 第一行：選單（【快慢充/車種規格】擺最前方，獨立 Gogoro 機車換電） -->
     <div class="ev-controls-row">
+      <div class="ev-control-group">
+        <label for="ev-power-select" class="ev-control-label">⚡ 充電規格 / 車種清單：</label>
+        <select id="ev-power-select" class="ev-select-dropdown" onchange="handlePowerChange(this.value)">
+          <option value="car_all" selected>🚗 汽車充電規格 (DC快充 + AC慢充)</option>
+          <option value="DC">⚡ 汽車 DC 快充站 (超快充 CCS1/CCS2/TPC)</option>
+          <option value="AC">🔌 汽車 AC 慢充站 (Type 2 / J1772)</option>
+          <option value="gogoro">🛵 Gogoro / 機車換電充電站</option>
+          <option value="all">🌐 全部規格 (汽車 + 機車全站點)</option>
+        </select>
+      </div>
+
       <div class="ev-control-group">
         <label for="ev-scenario-select" class="ev-control-label">📍 站點場域分類清單 (List)：</label>
         <select id="ev-scenario-select" class="ev-select-dropdown" onchange="handleScenarioChange(this.value)">
@@ -388,23 +400,16 @@
           <option value="澎湖">澎湖/金門/離島</option>
         </select>
       </div>
-
-      <div class="ev-control-group">
-        <label for="ev-power-select" class="ev-control-label">⚡ 快慢充規格清單：</label>
-        <select id="ev-power-select" class="ev-select-dropdown" onchange="handlePowerChange(this.value)">
-          <option value="all">⚡ 全部規格 (DC快充 + AC慢充)</option>
-          <option value="DC">⚡ DC 快充站 (超快充)</option>
-          <option value="AC">🔌 AC 慢充站 (漫遊充電)</option>
-        </select>
-      </div>
     </div>
 
     <!-- 第二行：快捷分類標籤與即時搜尋 -->
     <div class="ev-controls-row" style="margin-top: 10px; border-top: 1px dashed #e2e8f0; padding-top: 10px;">
       <div class="ev-quick-tabs">
         <span style="font-size:12px; color:#555; font-weight:bold;">快速分類：</span>
-        <button class="ev-quick-btn active" id="btn-tab-all" onclick="selectScenarioTab('all')">🌐 全部場域</button>
-        <button class="ev-quick-btn" id="btn-tab-city" onclick="selectScenarioTab('city')">🏙️ 都市市區</button>
+        <button class="ev-quick-btn active" id="btn-tab-car_all" onclick="selectPowerTab('car_all')">🚗 汽車全部</button>
+        <button class="ev-quick-btn" id="btn-tab-DC" onclick="selectPowerTab('DC')">⚡ DC快充</button>
+        <button class="ev-quick-btn" id="btn-tab-AC" onclick="selectPowerTab('AC')">🔌 AC慢充</button>
+        <button class="ev-quick-btn" id="btn-tab-gogoro" onclick="selectPowerTab('gogoro')">🛵 Gogoro換電</button>
         <button class="ev-quick-btn" id="btn-tab-highway" onclick="selectScenarioTab('highway')">🛣️ 國道服務區</button>
         <button class="ev-quick-btn" id="btn-tab-hotel" onclick="selectScenarioTab('hotel')">🏨 飯店住宿</button>
       </div>
@@ -446,8 +451,8 @@
         <thead>
           <tr>
             <th style="width: 26%;">站點名稱 / 場域</th>
-            <th style="width: 12%;">類型</th>
-            <th style="width: 16%;">營運業者</th>
+            <th style="width: 13%;">規格 / 車種</th>
+            <th style="width: 15%;">營運業者</th>
             <th style="width: 22%;">槍頭規格 / 功率</th>
             <th style="width: 24%;">地址與導航</th>
           </tr>
@@ -471,7 +476,7 @@
     let map, clusterGroup;
     let currentScenario = 'all'; // 'all' | 'city' | 'highway' | 'hotel'
     let currentCity = '';
-    let currentPower = 'all';    // 'all' | 'DC' | 'AC'
+    let currentPower = 'car_all'; // 預設只顯示汽車充電規格 ('car_all' | 'DC' | 'AC' | 'gogoro' | 'all')
     let currentKeyword = '';
 
     // 表格與分頁狀態
@@ -480,7 +485,7 @@
     let pageSize = 10;
     let markersMap = {}; // stationId -> { marker, station }
 
-    // 涵蓋全台國道服務區、主要都市公有/商場與熱門飯店充電站之基礎資料庫
+    // 涵蓋全台國道服務區、主要都市公有/商場、熱門飯店充電站與 Gogoro GoStation 基礎庫
     let stationData = [
       { id: "dc-001", name: "關西服務區快充站 (國道3號)", cat: "DC", lat: 24.7936, lng: 121.1685, type: "CCS1 / CCS2 / TPC", power: "360 kW (DC超快充)", addr: "新竹縣關西鎮新興路63號", op: "EVOASIS / U-POWER", price: "約 $8.5 - $11.5 /度" },
       { id: "dc-002", name: "泰安服務區(北上)快充站 (國道1號)", cat: "DC", lat: 24.3315, lng: 120.7108, type: "CCS1 / CCS2", power: "200 kW (DC快充)", addr: "台中市后里區安眉路113號", op: "華城 EVALUE", price: "約 $9.0 - $11.0 /度" },
@@ -527,7 +532,17 @@
       { id: "ht-003", name: "日月潭涵碧樓充電站", cat: "AC", lat: 23.8645, lng: 120.9123, type: "Tesla TPC / Type 2", power: "7-11 kW (AC慢充)", addr: "南投縣魚池鄉中興路142號", op: "涵碧樓大飯店", price: "房客專屬免費預約" },
       { id: "ht-004", name: "花蓮遠雄悅來大飯店充電站", cat: "AC", lat: 23.9015, lng: 121.6025, type: "J1772 / Tesla TPC", power: "7 kW (AC慢充)", addr: "花蓮縣壽豐鄉鹽寮村山嶺18號", op: "遠雄悅來大飯店", price: "房客免費專屬車位" },
       { id: "ht-005", name: "高雄萬豪酒店地下停車場", cat: "AC", lat: 22.6575, lng: 120.3065, type: "Tesla TPC / Type 2 / CCS2", power: "7-22 kW (AC慢充/快充)", addr: "高雄市鼓山區龍德新路222號", op: "高雄萬豪酒店 / 特斯拉", price: "依飯店停車場規範" },
-      { id: "ht-006", name: "墾丁夏都沙灘酒店充電站", cat: "AC", lat: 21.9421, lng: 120.7915, type: "J1772 / Tesla TPC", power: "7 kW (AC慢充)", addr: "屏東縣恆春鎮墾丁路451號", op: "夏都沙灘酒店", price: "房客免費預約充電" }
+      { id: "ht-006", name: "墾丁夏都沙灘酒店充電站", cat: "AC", lat: 21.9421, lng: 120.7915, type: "J1772 / Tesla TPC", power: "7 kW (AC慢充)", addr: "屏東縣恆春鎮墾丁路451號", op: "夏都沙灘酒店", price: "房客免費預約充電" },
+      { id: "gg-001", name: "Gogoro 台北信義威秀 GoStation", cat: "GOGORO", lat: 25.0356, lng: 121.5672, type: "Gogoro Network 智慧換電", power: "電池交換站 (機車)", addr: "台北市信義區松壽路20號", op: "Gogoro Network", price: "依 Gogoro 月租資費" },
+      { id: "gg-002", name: "Gogoro 新北板橋車站 GoStation", cat: "GOGORO", lat: 25.0142, lng: 121.4638, type: "Gogoro Network 智慧換電", power: "電池交換站 (機車)", addr: "新北市板橋區縣民大道二段7號", op: "Gogoro Network", price: "依 Gogoro 月租資費" },
+      { id: "gg-003", name: "Gogoro 桃園高鐵站前 GoStation", cat: "GOGORO", lat: 25.0128, lng: 121.2152, type: "Gogoro Network 智慧換電", power: "電池交換站 (機車)", addr: "桃園市中壢區高鐵北路一段6號", op: "Gogoro Network", price: "依 Gogoro 月租資費" },
+      { id: "gg-004", name: "Gogoro 新竹巨城 Super GoStation", cat: "GOGORO", lat: 24.8092, lng: 120.9750, type: "Super GoStation 超級換電站", power: "高容量電池交換 (機車)", addr: "新竹市東區中央路229號", op: "Gogoro Network", price: "依 Gogoro 月租資費" },
+      { id: "gg-005", name: "Gogoro 台中草悟道 Super GoStation", cat: "GOGORO", lat: 24.1508, lng: 120.6635, type: "Super GoStation 超級換電站", power: "高容量電池交換 (機車)", addr: "台中市西區公益路68號", op: "Gogoro Network", price: "依 Gogoro 月租資費" },
+      { id: "gg-006", name: "Gogoro 台南赤崁樓 GoStation", cat: "GOGORO", lat: 22.9978, lng: 120.2028, type: "Gogoro Network 智慧換電", power: "電池交換站 (機車)", addr: "台南市中西區民族路二段218號", op: "Gogoro Network", price: "依 Gogoro 月租資費" },
+      { id: "gg-007", name: "Gogoro 高雄愛河 Super GoStation", cat: "GOGORO", lat: 22.6235, lng: 120.2882, type: "Super GoStation 超級換電站", power: "高容量電池交換 (機車)", addr: "高雄市鹽埕區五福四路", op: "Gogoro Network", price: "依 Gogoro 月租資費" },
+      { id: "gg-008", name: "Gogoro 國道東山服務區 Super GoStation", cat: "GOGORO", lat: 23.2755, lng: 120.4135, type: "Super GoStation 超級換電站", power: "高容量電池交換 (機車)", addr: "台南市東山區枋嶋路412號", op: "Gogoro Network", price: "依 Gogoro 月租資費" },
+      { id: "gg-009", name: "Gogoro 花蓮火車站 Super GoStation", cat: "GOGORO", lat: 23.9930, lng: 121.6018, type: "Super GoStation 超級換電站", power: "高容量電池交換 (機車)", addr: "花蓮縣花蓮市國聯一路106號", op: "Gogoro Network", price: "依 Gogoro 月租資費" },
+      { id: "gg-010", name: "Gogoro 墾丁大街 GoStation", cat: "GOGORO", lat: 21.9442, lng: 120.7968, type: "Gogoro Network 智慧換電", power: "電池交換站 (機車)", addr: "屏東縣恆春鎮墾丁路142號", op: "Gogoro Network", price: "依 Gogoro 月租資費" }
     ];
 
     // 依據名稱與地址智慧判斷場域屬性 (國道 highway | 飯店 hotel | 都市市區 city)
@@ -540,6 +555,19 @@
         return 'hotel';
       }
       return 'city';
+    }
+
+    // 判斷站點車種與規格類別 (DC 快充 | AC 慢充 | GOGORO 機車換電)
+    function getStationCategory(st) {
+      const rawCat = (st.cat || st.category || '').toUpperCase();
+      const text = ((st.name || '') + ' ' + (st.op || '') + ' ' + (st.operator || '') + ' ' + (st.type || '') + ' ' + (st.addr || '') + ' ' + (st.power || '')).toLowerCase();
+      if (rawCat === 'GOGORO' || rawCat === 'SCOOTER' || /gogoro|gostation|換電|機車充電|ionex|光陽換電|pbgn/i.test(text)) {
+        return 'GOGORO';
+      }
+      if (rawCat === 'DC' || /dc|快充|超充|supercharger|ccs1|ccs2|chademo|360\s*kw|200\s*kw|180\s*kw|120\s*kw|100\s*kw/i.test(text)) {
+        return 'DC';
+      }
+      return 'AC';
     }
 
     function initEvMap() {
@@ -609,21 +637,24 @@
       const kw = currentKeyword.trim().toLowerCase();
 
       stationData.forEach(st => {
-        const cat = st.cat || st.category || 'AC';
-        const name = st.name || '充電站';
-        const op = st.op || st.operator || '充電營運商';
+        const cat = getStationCategory(st);
+        const name = st.name || (cat === 'GOGORO' ? 'Gogoro 換電站' : '充電站');
+        const op = st.op || st.operator || (cat === 'GOGORO' ? 'Gogoro Network' : '充電營運商');
         const addr = st.addr || st.address || '';
-        const type = st.type || 'J1772 / CCS1 / CCS2';
-        const power = st.power || '快/慢充';
+        const type = st.type || (cat === 'GOGORO' ? 'Gogoro Network 智慧換電' : 'J1772 / CCS1 / CCS2');
+        const power = st.power || (cat === 'GOGORO' ? '電池交換站 (機車)' : '快/慢充');
         const price = st.price || '依現場公告';
         const scenario = getStationScenario(st);
         const stId = st.id || `${st.lat}_${st.lng}`;
 
-        // 1. 場域清單篩選 (都市 / 國道 / 飯店 / 全部)
-        if (currentScenario !== 'all' && scenario !== currentScenario) return;
+        // 1. 車種與充電規格篩選 (預設 car_all 只查汽車 DC+AC，排除機車)
+        if (currentPower === 'car_all' && (cat !== 'DC' && cat !== 'AC')) return;
+        if (currentPower === 'DC' && cat !== 'DC') return;
+        if (currentPower === 'AC' && cat !== 'AC') return;
+        if (currentPower === 'gogoro' && cat !== 'GOGORO') return;
 
-        // 2. 快慢充規格清單篩選 (DC / AC / 全部)
-        if (currentPower !== 'all' && cat !== currentPower) return;
+        // 2. 場域清單篩選 (都市 / 國道 / 飯店 / 全部)
+        if (currentScenario !== 'all' && scenario !== currentScenario) return;
 
         // 3. 都市縣市選單篩選
         if (currentCity && !addr.includes(currentCity) && !name.includes(currentCity)) return;
@@ -644,6 +675,10 @@
           scenarioBadge = '<span style="background:#6a1b9a; color:#fff; padding:2px 8px; border-radius:4px; font-size:11px;">🏨 飯店住宿</span>';
         }
 
+        let catBadgeText = '🔌 AC 慢充';
+        if (cat === 'DC') catBadgeText = '⚡ DC 快充';
+        else if (cat === 'GOGORO') catBadgeText = '🛵 Gogoro 換電';
+
         const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${st.lat},${st.lng}`;
 
         // 若為飯店，提供專屬訂房比價連結
@@ -663,11 +698,11 @@
           <div style="font-family: sans-serif; min-width: 230px; padding: 4px; line-height: 1.45;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
               ${scenarioBadge}
-              <span style="font-size:11px; color:#666;">${cat === 'DC' ? '⚡ DC快充' : '🔌 AC慢充'}</span>
+              <span style="font-size:11px; color:#475569; font-weight:bold;">${catBadgeText}</span>
             </div>
             <h4 style="margin: 2px 0 6px 0; color: #00287c; font-size: 15px; font-weight: bold;">${name}</h4>
             <p style="margin: 3px 0; font-size: 13px;"><b>營運業者：</b>${op}</p>
-            <p style="margin: 3px 0; font-size: 13px;"><b>槍頭規格：</b>${type}</p>
+            <p style="margin: 3px 0; font-size: 13px;"><b>規格形式：</b>${type}</p>
             <p style="margin: 3px 0; font-size: 13px;"><b>輸出功率：</b>${power}</p>
             <p style="margin: 3px 0; font-size: 12px; color: #666;">${addr}</p>
             <p style="margin: 3px 0; font-size: 12px; color: #e65100;"><b>收費標準：</b>${price}</p>
@@ -683,11 +718,18 @@
 
       const countEl = document.getElementById('ev-station-count');
       if (countEl) {
-        let label = '全部場域';
-        if (currentScenario === 'city') label = '🏙️ 都市市區';
-        else if (currentScenario === 'highway') label = '🛣️ 國道服務區';
-        else if (currentScenario === 'hotel') label = '🏨 飯店住宿';
-        countEl.innerHTML = `📍 目前已篩選出 <b>${filteredStationsList.length}</b> 處【${label}】充電站點`;
+        let specLabel = '🚗 汽車規格';
+        if (currentPower === 'DC') specLabel = '⚡ DC 快充';
+        else if (currentPower === 'AC') specLabel = '🔌 AC 慢充';
+        else if (currentPower === 'gogoro') specLabel = '🛵 Gogoro 機車換電';
+        else if (currentPower === 'all') specLabel = '🌐 全規格';
+
+        let scenarioLabel = '全部場域';
+        if (currentScenario === 'city') scenarioLabel = '🏙️ 都市市區';
+        else if (currentScenario === 'highway') scenarioLabel = '🛣️ 國道服務區';
+        else if (currentScenario === 'hotel') scenarioLabel = '🏨 飯店住宿';
+
+        countEl.innerHTML = `📍 目前已篩選出 <b>${filteredStationsList.length}</b> 處【${specLabel} / ${scenarioLabel}】站點`;
       }
 
       // 重設分頁至第 1 頁並渲染表格
@@ -741,10 +783,13 @@
         if (st.scenario === 'highway') scenarioBadge = '<span class="ev-badge-pill ev-badge-highway">🛣️ 國道</span>';
         else if (st.scenario === 'hotel') scenarioBadge = '<span class="ev-badge-pill ev-badge-hotel">🏨 飯店</span>';
 
-        // 快慢充標籤
-        const catBadge = st.cat === 'DC'
-          ? '<span class="ev-badge-pill ev-badge-dc">⚡ DC 快充</span>'
-          : '<span class="ev-badge-pill ev-badge-ac">🔌 AC 慢充</span>';
+        // 規格標籤 (DC / AC / GOGORO)
+        let catBadge = '<span class="ev-badge-pill ev-badge-ac">🔌 AC 慢充</span>';
+        if (st.cat === 'DC') {
+          catBadge = '<span class="ev-badge-pill ev-badge-dc">⚡ DC 快充</span>';
+        } else if (st.cat === 'GOGORO') {
+          catBadge = '<span class="ev-badge-pill ev-badge-gogoro">🛵 Gogoro 換電</span>';
+        }
 
         html += `
           <tr>
@@ -840,27 +885,51 @@
       }
     }
 
-    // List 下拉選單切換場域 (都市 / 國道 / 飯店 / 全部)
-    function handleScenarioChange(scenarioVal) {
-      currentScenario = scenarioVal;
-      updateQuickTabs(scenarioVal);
+    // 充電規格 / 車種下拉選單切換 (car_all | DC | AC | gogoro | all)
+    function handlePowerChange(powerVal) {
+      currentPower = powerVal;
+      updateQuickTabs();
       renderMarkers();
     }
 
-    // 快速 Tab 標籤切換
+    // 快速 Tab 標籤切換規格
+    function selectPowerTab(powerVal) {
+      currentPower = powerVal;
+      const selectEl = document.getElementById('ev-power-select');
+      if (selectEl) selectEl.value = powerVal;
+      updateQuickTabs();
+      renderMarkers();
+    }
+
+    // List 下拉選單切換場域 (都市 / 國道 / 飯店 / 全部)
+    function handleScenarioChange(scenarioVal) {
+      currentScenario = scenarioVal;
+      updateQuickTabs();
+      renderMarkers();
+    }
+
+    // 快速 Tab 標籤切換場域
     function selectScenarioTab(scenarioVal) {
       currentScenario = scenarioVal;
       const selectEl = document.getElementById('ev-scenario-select');
       if (selectEl) selectEl.value = scenarioVal;
-      updateQuickTabs(scenarioVal);
+      updateQuickTabs();
       renderMarkers();
     }
 
-    function updateQuickTabs(val) {
-      ['all', 'city', 'highway', 'hotel'].forEach(key => {
+    function updateQuickTabs() {
+      ['car_all', 'DC', 'AC', 'gogoro'].forEach(key => {
         const btn = document.getElementById('btn-tab-' + key);
         if (btn) {
-          if (key === val) btn.classList.add('active');
+          if (key === currentPower) btn.classList.add('active');
+          else btn.classList.remove('active');
+        }
+      });
+
+      ['highway', 'hotel'].forEach(key => {
+        const btn = document.getElementById('btn-tab-' + key);
+        if (btn) {
+          if (key === currentScenario) btn.classList.add('active');
           else btn.classList.remove('active');
         }
       });
@@ -869,12 +938,6 @@
     // 都市縣市跳轉切換
     function handleCityChange(cityVal) {
       currentCity = cityVal;
-      renderMarkers();
-    }
-
-    // 快慢充規格清單切換
-    function handlePowerChange(powerVal) {
-      currentPower = powerVal;
       renderMarkers();
     }
 
