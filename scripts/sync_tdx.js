@@ -720,44 +720,79 @@ async function getTdxAccessToken(clientId, clientSecret) {
   return data.access_token;
 }
 
-// 遞迴分頁拉取 TDX 全台所有充電站點資料
+// 遞迴分頁拉取 TDX 全台所有充電站點資料 (支援全區 API 與各縣市/國道子路由備援)
 async function fetchAllTdxStations(token) {
   const allStations = [];
   const top = 1000;
-  let skip = 0;
-  let hasMore = true;
 
   console.log('開始分頁擷取 TDX 全台充電站資料 ($top=1000)...');
 
-  while (hasMore) {
-    const apiUrl = `https://tdx.transportdata.tw/api/basic/v1/EV/Station?$format=JSON&$top=${top}&$skip=${skip}`;
-    console.log(`正在請求 TDX API: skip=${skip}, top=${top}...`);
+  // 1. 嘗試直接拉取全台總端點
+  try {
+    let skip = 0;
+    let hasMore = true;
+    while (hasMore) {
+      const apiUrl = `https://tdx.transportdata.tw/api/basic/v1/EV/Station?$format=JSON&$top=${top}&$skip=${skip}`;
+      console.log(`正在請求 TDX 全台總端點: skip=${skip}, top=${top}...`);
 
-    const res = await fetch(apiUrl, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json'
+      const res = await fetch(apiUrl, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!res.ok) {
+        console.warn(`TDX 全台總端點回應 (HTTP ${res.status}): ${res.statusText}`);
+        break;
       }
-    });
 
-    if (!res.ok) {
-      console.error(`TDX API 請求中斷 (HTTP ${res.status}): ${res.statusText}`);
-      break;
+      const pageData = await res.json();
+      if (!Array.isArray(pageData) || pageData.length === 0) break;
+
+      allStations.push(...pageData);
+      console.log(`成功獲取 ${pageData.length} 筆資料 (累計: ${allStations.length} 筆)`);
+
+      if (pageData.length < top) {
+        hasMore = false;
+      } else {
+        skip += top;
+      }
     }
+  } catch (err) {
+    console.warn('全台總端點請求異常:', err.message);
+  }
 
-    const pageData = await res.json();
-    if (!Array.isArray(pageData) || pageData.length === 0) {
-      hasMore = false;
-      break;
-    }
+  // 2. 若全台總端點為 0 筆，嘗試拉取國道與各縣市子端點
+  if (allStations.length === 0) {
+    console.log('嘗試從 TDX 國道與全台 22 縣市子端點聚合資料...');
+    const subEndpoints = [
+      'Freeway', 'Taipei', 'NewTaipei', 'Taoyuan', 'Taichung', 'Tainan', 'Kaohsiung',
+      'Keelung', 'Hsinchu', 'HsinchuCounty', 'MiaoliCounty', 'ChanghuaCounty',
+      'NantouCounty', 'YunlinCounty', 'Chiayi', 'ChiayiCounty', 'PingtungCounty',
+      'YilanCounty', 'HualienCounty', 'TaitungCounty', 'PenghuCounty', 'KinmenCounty'
+    ];
 
-    allStations.push(...pageData);
-    console.log(`成功獲取 ${pageData.length} 筆資料 (累計: ${allStations.length} 筆)`);
+    for (const sub of subEndpoints) {
+      try {
+        const subUrl = `https://tdx.transportdata.tw/api/basic/v1/EV/Station/${sub === 'Freeway' ? 'Freeway' : 'City/' + sub}?$format=JSON&$top=500`;
+        const res = await fetch(subUrl, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+          }
+        });
 
-    if (pageData.length < top) {
-      hasMore = false;
-    } else {
-      skip += top;
+        if (res.ok) {
+          const list = await res.json();
+          if (Array.isArray(list) && list.length > 0) {
+            allStations.push(...list);
+            console.log(`  [${sub}] 成功取得 ${list.length} 筆資料`);
+          }
+        }
+      } catch (e) {
+        // 忽略個別縣市連線例外
+      }
     }
   }
 
