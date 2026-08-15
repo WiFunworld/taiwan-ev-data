@@ -74,7 +74,7 @@
   {
     "id": "ac-001",
     "name": "台北市政府地下停車場",
-    category: "AC",
+    "category": "AC",
     "lat": 25.0375,
     "lng": 121.5644,
     "operator": "台北市交通局",
@@ -86,9 +86,9 @@
   {
     "id": "ac-002",
     "name": "新竹縣政府地下停車場",
-    category: "AC",
+    "category": "AC",
     "lat": 24.8387,
-    "lng: 121.0125,
+    "lng": 121.0125,
     "operator": "新竹縣政府",
     "type": "J1772",
     "power": "7 kW (AC慢充)",
@@ -98,7 +98,7 @@
   {
     "id": "ac-003",
     "name": "台中秋紅谷地下停車場",
-    category: "AC",
+    "category": "AC",
     "lat": 24.1672,
     "lng": 120.6394,
     "operator": "台中市交通局",
@@ -110,7 +110,7 @@
   {
     "id": "ac-004",
     "name": "高雄巨蛋地下停車場",
-    category: "AC",
+    "category": "AC",
     "lat": 22.6695,
     "lng": 120.3022,
     "operator": "高雄市交通局",
