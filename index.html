@@ -233,26 +233,38 @@
       font-size: 13px;
       text-align: left;
       min-width: 680px;
+      border: 1.5px solid #cbd5e1;
+      background: #ffffff;
     }
     .ev-stations-table th {
       background-color: #00287c;
       color: #ffffff;
-      padding: 11px 14px;
+      padding: 12px 14px;
       font-weight: bold;
-      border: 1px solid #00287c;
+      font-size: 13px;
+      border: 1px solid #001f5c;
+      border-right: 1px solid rgba(255, 255, 255, 0.25);
       white-space: nowrap;
+      text-align: center;
+      letter-spacing: 0.5px;
+    }
+    .ev-stations-table th:first-child {
+      text-align: left;
+    }
+    .ev-stations-table th:last-child {
+      border-right: 1px solid #001f5c;
     }
     .ev-stations-table td {
-      padding: 10px 14px;
-      border-bottom: 1px solid #e5e7eb;
+      padding: 11px 14px;
+      border: 1px solid #e2e8f0;
       vertical-align: middle;
-      line-height: 1.45;
+      line-height: 1.5;
     }
     .ev-stations-table tbody tr:nth-child(even) {
-      background-color: #fcfcfc;
+      background-color: #f8fafc;
     }
     .ev-stations-table tbody tr:hover {
-      background-color: #f0f4ff;
+      background-color: #f0f7ff;
     }
     .ev-badge-pill {
       display: inline-block;
@@ -737,23 +749,25 @@
         html += `
           <tr>
             <td>
-              <div style="font-weight:bold; color:#00287c; margin-bottom:3px;">
-                <span style="color:#666; font-size:12px; margin-right:4px;">#${itemNumber}</span>${st.name}
+              <div style="font-weight:bold; color:#00287c; margin-bottom:4px; font-size:14px;">
+                <span style="color:#666; font-size:12px; margin-right:4px; font-weight:normal;">#${itemNumber}</span>${st.name}
               </div>
-              <div style="display:flex; gap:4px; align-items:center;">
+              <div style="display:flex; gap:4px; align-items:center; flex-wrap:wrap;">
                 ${scenarioBadge}
                 ${st.scenario === 'hotel' ? '<a href="https://tinyurl.com/2jxz6pes" target="_blank" style="font-size:11px; color:#7e22ce; font-weight:bold; text-decoration:underline;">【訂房】</a>' : ''}
               </div>
             </td>
-            <td>${catBadge}</td>
-            <td><b>${st.op}</b></td>
-            <td>
-              <div style="font-weight:500;">${st.type}</div>
-              <div style="font-size:12px; color:#666;">⚡ ${st.power}</div>
+            <td style="text-align:center;">${catBadge}</td>
+            <td style="text-align:center;">
+              <span style="font-weight:600; color:#333;">${st.op}</span>
             </td>
             <td>
-              <div style="font-size:12px; color:#555; margin-bottom:4px; max-width:260px; word-break:break-all;">${st.addr}</div>
-              <div style="display:flex; gap:4px; align-items:center; flex-wrap:wrap;">
+              <div style="font-weight:600; color:#1e293b;">${st.type}</div>
+              <div style="font-size:12px; color:#475569; margin-top:2px;">⚡ ${st.power}</div>
+            </td>
+            <td>
+              <div style="font-size:12px; color:#4b5563; margin-bottom:6px; max-width:280px; word-break:break-all; line-height:1.4;">${st.addr}</div>
+              <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
                 <button type="button" class="ev-btn-action ev-btn-locate" onclick="locateStationOnMap('${st.id}')">📍 定位地圖</button>
                 <a href="${navUrl}" target="_blank" class="ev-btn-action ev-btn-nav">🚗 導航</a>
               </div>
