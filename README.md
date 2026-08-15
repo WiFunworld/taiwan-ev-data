@@ -8,14 +8,14 @@
 
 ### 1. 在 GitHub 上建立儲存庫 (Repository)
 1. 前往 GitHub 建立一個全新的 Public Repository。
-2. 專案名稱建議命名為：`taiwan-ev-data`
+2. 專案名稱命名為：`taiwan-ev-data`
 
 ### 2. 設定 TDX API 加密金鑰 (Secrets)
 1. 進入您剛建立的 GitHub 儲存庫頁面。
 2. 點選頂部的 **Settings** ➔ 左側欄 **Secrets and variables** ➔ 點選 **Actions**。
-3. 點選 **New repository secret** 增加以下兩組密碼：
-   * **`TDX_CLIENT_ID`** ➔ 填入您的 TDX Client ID (`andy.wiya-d3dab7c3-b695-4ad8`)
-   * **`TDX_CLIENT_SECRET`** ➔ 填入您的 TDX Client Secret (`87aa112e-e057-409b-bbb4-ff5e70c281a3`)
+3. 點選 **New repository secret** 增加以下兩組加密密碼：
+   * **`TDX_CLIENT_ID`** ➔ 填入您個人在 TDX 申請的 Client ID
+   * **`TDX_CLIENT_SECRET`** ➔ 填入您個人在 TDX 申請的 Client Secret
 
 ### 3. 將本專案推送 (Push) 上去
 在 Terminal 中執行：
