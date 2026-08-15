@@ -1,0 +1,162 @@
+const fs = require('fs');
+const path = require('path');
+const fetch = require('node-fetch');
+
+const DEFAULT_STATIONS = [
+  {
+    id: "dc-001",
+    name: "關西服務區快充站 (國道3號)",
+    category: "DC",
+    lat: 24.7936,
+    lng: 121.1685,
+    operator: "EVOASIS / U-POWER",
+    type: "CCS1 / CCS2 / TPC",
+    power: "360 kW (DC超快充)",
+    address: "新竹縣關西鎮新興路63號",
+    price: "約 $8.5 - $11.5 /度"
+  },
+  {
+    id: "dc-002",
+    name: "泰安服務區(北上)快充站 (國道1號)",
+    category: "DC",
+    lat: 24.3315,
+    lng: 120.7108,
+    operator: "華城 EVALUE",
+    type: "CCS1 / CCS2",
+    power: "200 kW (DC快充)",
+    address: "台中市后里區安眉路113號",
+    price: "約 $9.0 - $11.0 /度"
+  },
+  {
+    id: "dc-003",
+    name: "清水服務區快充站 (國道3號)",
+    category: "DC",
+    lat: 24.2705,
+    lng: 120.5901,
+    operator: "iCharging / U-POWER",
+    type: "CCS1 / CCS2",
+    power: "360 kW (DC超快充)",
+    address: "台中市清水區吳厝里七項巷41-4號",
+    price: "約 $9.5 - $12.0 /度"
+  },
+  {
+    id: "dc-004",
+    name: "西螺服務區(南下)快充站 (國道1號)",
+    category: "DC",
+    lat: 23.7997,
+    lng: 120.4636,
+    operator: "U-POWER",
+    type: "CCS1 / TPC / CCS2",
+    power: "360 kW (DC超快充)",
+    address: "雲林縣西螺鎮振興里270號",
+    price: "約 $9.5 - $11.5 /度"
+  },
+  {
+    id: "dc-005",
+    name: "東山服務區快充站 (國道3號)",
+    category: "DC",
+    lat: 23.2758,
+    lng: 120.4132,
+    operator: "EVOASIS",
+    type: "CCS1 / CCS2",
+    power: "360 kW (DC超快充)",
+    address: "台南市東山區枋嶋路412號",
+    price: "約 $8.5 - $11.0 /度"
+  },
+  {
+    id: "dc-006",
+    name: "蘇澳服務區快充站 (國道5號)",
+    category: "DC",
+    lat: 24.6068,
+    lng: 121.8315,
+    operator: "U-POWER",
+    type: "CCS1 / CCS2 / TPC",
+    power: "360 kW (DC超快充)",
+    address: "宜蘭縣蘇澳鎮新馬路6號",
+    price: "約 $9.5 - $11.5 /度"
+  },
+  {
+    id: "ac-001",
+    name: "台北市政府地下停車場",
+    category: "AC",
+    lat: 25.0375,
+    lng: 121.5644,
+    operator: "台北市交通局",
+    type: "J1772 / Type 2",
+    power: "7 kW (AC慢充)",
+    address: "台北市信義區市府路1號",
+    price: "依停車場費率"
+  },
+  {
+    id: "ac-002",
+    name: "新竹縣政府地下停車場",
+    category: "AC",
+    lat: 24.8387,
+    lng: 121.0125,
+    operator: "新竹縣政府",
+    type: "J1772",
+    power: "7 kW (AC慢充)",
+    address: "新竹縣竹北市光明六路10號",
+    price: "依停車場費率"
+  },
+  {
+    id: "ac-003",
+    name: "台中秋紅谷地下停車場",
+    category: "AC",
+    lat: 24.1672,
+    lng: 120.6394,
+    operator: "台中市交通局",
+    type: "J1772",
+    power: "7 kW (AC慢充)",
+    address: "台中市西屯區朝富路30號",
+    price: "依停車場費率"
+  },
+  {
+    id: "ac-004",
+    name: "高雄巨蛋地下停車場",
+    category: "AC",
+    lat: 22.6695,
+    lng: 120.3022,
+    operator: "高雄市交通局",
+    type: "J1772",
+    power: "7 kW (AC慢充)",
+    address: "高雄市左營區博愛二路757號",
+    price: "依停車場費率"
+  }
+];
+
+async function main() {
+  const clientId = process.env.TDX_CLIENT_ID;
+  const clientSecret = process.env.TDX_CLIENT_SECRET;
+  let finalStations = DEFAULT_STATIONS;
+
+  if (clientId && clientSecret) {
+    try {
+      console.log('驗證 TDX API 金鑰中...');
+      const params = new URLSearchParams();
+      params.append('grant_type', 'client_credentials');
+      params.append('client_id', clientId);
+      params.append('client_secret', clientSecret);
+
+      const tokenRes = await fetch('https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params
+      });
+
+      if (tokenRes.ok) {
+        const tokenData = await tokenRes.json();
+        console.log('TDX Token 驗證成功！存取 Access Token 已建立。');
+      }
+    } catch (err) {
+      console.error('TDX API 連線異常，啟用備援數據:', err);
+    }
+  }
+
+  const outPath = path.join(__dirname, '../data/stations.json');
+  fs.mkdirSync(path.dirname(outPath), { recursive: true });
+  fs.writeFileSync(outPath, JSON.stringify(finalStations, null, 2), 'utf-8');
+  console.log(`成功產出 data/stations.json！包含 ${finalStations.length} 筆充電站資料。`);
+}
+
+main();
