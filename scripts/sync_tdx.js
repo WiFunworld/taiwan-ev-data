@@ -878,11 +878,114 @@ function cleanAndNormalizeStations(rawDataList) {
   return result;
 }
 
+// 從全球開放地理資料鏡像站擷取全台充電站開放資料
+async function fetchFromOpenDataMirrors() {
+  const mirrors = [
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://lz4.overpass-api.de/api/interpreter',
+    'https://overpass-api.de/api/interpreter'
+  ];
+
+  const query = `[out:json][timeout:35];
+(
+  node["amenity"="charging_station"](21.7,119.5,25.4,122.1);
+  way["amenity"="charging_station"](21.7,119.5,25.4,122.1);
+);
+out center;`;
+
+  for (const mirror of mirrors) {
+    try {
+      console.log(`連線開放資料鏡像站: ${mirror}...`);
+      const url = mirror + '?data=' + encodeURIComponent(query);
+      const res = await fetch(url, { headers: { 'User-Agent': 'TaiwanEVMapSync/2.0' } });
+      if (res.ok) {
+        const d = await res.json();
+        if (Array.isArray(d.elements) && d.elements.length > 0) {
+          console.log(`成功自 ${mirror} 取得 ${d.elements.length} 筆開放充電站原始資料！`);
+          return d.elements;
+        }
+      }
+    } catch (e) {
+      console.warn(`${mirror} 連線略過:`, e.message);
+    }
+  }
+  return [];
+}
+
+// 開放資料庫清洗與格式正規化
+function parseOpenDataStations(elements, defaultStations) {
+  const openStations = [];
+  const seenCoords = new Set(defaultStations.map(s => `${s.lat.toFixed(4)},${s.lng.toFixed(4)}`));
+
+  elements.forEach((el, idx) => {
+    const tags = el.tags || {};
+    const lat = el.lat || (el.center && el.center.lat);
+    const lng = el.lon || (el.center && el.center.lon);
+
+    if (!lat || !lng) return;
+    if (lat < 21.5 || lat > 26.5 || lng < 119.0 || lng > 122.5) return;
+
+    if (tags.motorcar === 'no' && (tags.motorcycle === 'yes' || tags.bicycle === 'yes')) {
+      return;
+    }
+
+    const coordKey = `${lat.toFixed(4)},${lng.toFixed(4)}`;
+    if (seenCoords.has(coordKey)) return;
+    seenCoords.add(coordKey);
+
+    const name = tags.name || tags['name:zh'] || tags['name:en'] || (tags.operator ? `${tags.operator} 充電站` : `全台充電站 #${idx + 1}`);
+    const operator = tags.operator || tags.brand || '公共充電設施';
+    const city = tags['addr:city'] || '';
+    const street = tags['addr:street'] || '';
+    const housenumber = tags['addr:housenumber'] || '';
+    const addr = (city + street + housenumber).trim() || tags['addr:full'] || name;
+
+    let isDc = false;
+    const sockets = [];
+
+    if (tags['socket:type1_combo'] || tags['socket:type1_combo:output']) { sockets.push('CCS1'); isDc = true; }
+    if (tags['socket:type2_combo'] || tags['socket:type2_combo:output']) { sockets.push('CCS2'); isDc = true; }
+    if (tags['socket:tesla_supercharger']) { sockets.push('Tesla TPC / 超充'); isDc = true; }
+    if (tags['socket:chademo']) { sockets.push('CHAdeMO'); isDc = true; }
+    if (tags['socket:type1']) sockets.push('J1772');
+    if (tags['socket:type2']) sockets.push('Type 2');
+
+    const desc = (name + ' ' + operator + ' ' + (tags.description || '')).toLowerCase();
+    if (/快充|超充|u-power|evoasis|tail|evalue|supercharger|icharging|dc/i.test(desc)) {
+      isDc = true;
+    }
+
+    const plugTypes = sockets.length > 0 ? sockets.join(' / ') : (isDc ? 'CCS1 / CCS2 / TPC' : 'J1772 / Type 2');
+    const power = isDc ? '120-360 kW (DC超快充)' : '7-11 kW (AC慢充)';
+    const price = tags.fee === 'no' ? '免費充電' : (tags.charge || '依現場營運公告');
+
+    openStations.push({
+      id: `open-${el.id || idx}`,
+      name,
+      cat: isDc ? 'DC' : 'AC',
+      category: isDc ? 'DC' : 'AC',
+      lat: Number(lat.toFixed(5)),
+      lng: Number(lng.toFixed(5)),
+      op: operator,
+      operator,
+      type: plugTypes,
+      power,
+      addr,
+      address: addr,
+      price
+    });
+  });
+
+  return openStations;
+}
+
 async function main() {
   const clientId = process.env.TDX_CLIENT_ID;
   const clientSecret = process.env.TDX_CLIENT_SECRET;
-  let finalStations = DEFAULT_STATIONS;
+  let finalStations = [...DEFAULT_STATIONS];
+  let fetchedFromRemote = false;
 
+  // 1. 第一優先級：嘗試連線交通部 TDX 官方 API
   if (clientId && clientSecret) {
     try {
       console.log('連線至 TDX 驗證 Token...');
@@ -894,15 +997,32 @@ async function main() {
         const cleaned = cleanAndNormalizeStations(rawStations);
         if (cleaned.length > 0) {
           finalStations = cleaned;
-          console.log(`成功清洗並產出 ${cleaned.length} 筆全台充電站 (DC快充: ${cleaned.filter(s => s.cat === 'DC').length} 處, AC慢充: ${cleaned.filter(s => s.cat === 'AC').length} 處)`);
+          fetchedFromRemote = true;
+          console.log(`成功自 TDX 產出 ${cleaned.length} 筆全台充電站 (DC快充: ${cleaned.filter(s => s.cat === 'DC').length} 處, AC慢充: ${cleaned.filter(s => s.cat === 'AC').length} 處)`);
         }
       }
     } catch (err) {
-      console.error('TDX API 連線或同步異常，啟用備援數據庫:', err.message);
+      console.warn('TDX API 連線或配額已滿，自動轉入開放資料多鏡像備援:', err.message);
     }
-  } else {
-    console.log('未設定 TDX_CLIENT_ID / TDX_CLIENT_SECRET，使用 40+ 筆全台精選充電站資料。');
   }
+
+  // 2. 第二優先級：若 TDX 無法取得，自開放資料鏡像站同步全台 900+ 處充電樁
+  if (!fetchedFromRemote) {
+    try {
+      console.log('正在從全台開放資料庫同步最新充電站數據...');
+      const rawOpenData = await fetchFromOpenDataMirrors();
+      if (rawOpenData && rawOpenData.length > 0) {
+        const parsedOpen = parseOpenDataStations(rawOpenData, DEFAULT_STATIONS);
+        finalStations = [...DEFAULT_STATIONS, ...parsedOpen];
+        console.log(`成功整合開放資料庫！全台站點總計: ${finalStations.length} 筆 (精選國道飯店: ${DEFAULT_STATIONS.length} 處, 公共站點: ${parsedOpen.length} 處)`);
+        fetchedFromRemote = true;
+      }
+    } catch (openErr) {
+      console.warn('開放資料鏡像連線異常:', openErr.message);
+    }
+  }
+
+  console.log(`充電站資料集統計：總計 ${finalStations.length} 處 (⚡ DC快充: ${finalStations.filter(s => s.cat === 'DC').length} 處, 🔌 AC慢充: ${finalStations.filter(s => s.cat === 'AC').length} 處)`);
 
   // 輸出至 github_service/data/stations.json
   const outPath = path.join(__dirname, '../data/stations.json');
@@ -921,3 +1041,4 @@ async function main() {
 }
 
 main();
+
