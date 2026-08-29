@@ -5130,6 +5130,21 @@
     "price": "依現場營運公告"
   },
   {
+    "id": "open-14132900887",
+    "name": "Gogoro 電池交換站",
+    "cat": "AC",
+    "category": "AC",
+    "lat": 23.02543,
+    "lng": 120.23717,
+    "op": "Gogoro 電池交換站",
+    "operator": "Gogoro 電池交換站",
+    "type": "J1772 / Type 2",
+    "power": "7-11 kW (AC慢充)",
+    "addr": "Gogoro 電池交換站",
+    "address": "Gogoro 電池交換站",
+    "price": "依現場營運公告"
+  },
+  {
     "id": "open-298977939",
     "name": "電動車充電站",
     "cat": "AC",
@@ -5251,7 +5266,7 @@
   },
   {
     "id": "open-1244816052",
-    "name": "全台充電站 #307",
+    "name": "全台充電站 #308",
     "cat": "DC",
     "category": "DC",
     "lat": 24.794,
@@ -5260,13 +5275,13 @@
     "operator": "U-POWER 充電站",
     "type": "CCS1 / CCS2 / TPC",
     "power": "120-360 kW (DC超快充)",
-    "addr": "全台充電站 #307",
-    "address": "全台充電站 #307",
+    "addr": "全台充電站 #308",
+    "address": "全台充電站 #308",
     "price": "依現場營運公告"
   },
   {
     "id": "open-1244816053",
-    "name": "全台充電站 #308",
+    "name": "全台充電站 #309",
     "cat": "DC",
     "category": "DC",
     "lat": 24.83113,
@@ -5275,8 +5290,8 @@
     "operator": "U-POWER 充電站",
     "type": "CCS1 / CCS2 / TPC",
     "power": "120-360 kW (DC超快充)",
-    "addr": "全台充電站 #308",
-    "address": "全台充電站 #308",
+    "addr": "全台充電站 #309",
+    "address": "全台充電站 #309",
     "price": "依現場營運公告"
   },
   {
@@ -5296,7 +5311,7 @@
   },
   {
     "id": "open-1330834674",
-    "name": "全台充電站 #310",
+    "name": "全台充電站 #311",
     "cat": "DC",
     "category": "DC",
     "lat": 22.99208,
@@ -5305,8 +5320,8 @@
     "operator": "U-POWER 充電站",
     "type": "CCS1 / CCS2 / TPC",
     "power": "120-360 kW (DC超快充)",
-    "addr": "全台充電站 #310",
-    "address": "全台充電站 #310",
+    "addr": "全台充電站 #311",
+    "address": "全台充電站 #311",
     "price": "依現場營運公告"
   },
   {
@@ -5326,7 +5341,7 @@
   },
   {
     "id": "open-1465793680",
-    "name": "全台充電站 #312",
+    "name": "全台充電站 #313",
     "cat": "AC",
     "category": "AC",
     "lat": 24.13082,
@@ -5335,13 +5350,13 @@
     "operator": "公共充電設施",
     "type": "J1772 / Type 2",
     "power": "7-11 kW (AC慢充)",
-    "addr": "全台充電站 #312",
-    "address": "全台充電站 #312",
+    "addr": "全台充電站 #313",
+    "address": "全台充電站 #313",
     "price": "依現場營運公告"
   },
   {
     "id": "open-1469034117",
-    "name": "全台充電站 #313",
+    "name": "全台充電站 #314",
     "cat": "AC",
     "category": "AC",
     "lat": 22.92314,
@@ -5350,8 +5365,8 @@
     "operator": "公共充電設施",
     "type": "J1772 / Type 2",
     "power": "7-11 kW (AC慢充)",
-    "addr": "全台充電站 #313",
-    "address": "全台充電站 #313",
+    "addr": "全台充電站 #314",
+    "address": "全台充電站 #314",
     "price": "依現場營運公告"
   },
   {
@@ -5416,7 +5431,7 @@
   },
   {
     "id": "open-1547383478",
-    "name": "全台充電站 #318",
+    "name": "全台充電站 #319",
     "cat": "DC",
     "category": "DC",
     "lat": 25.05068,
@@ -5425,8 +5440,8 @@
     "operator": "EVOASIS",
     "type": "CCS1 / CCS2 / TPC",
     "power": "120-360 kW (DC超快充)",
-    "addr": "全台充電站 #318",
-    "address": "全台充電站 #318",
+    "addr": "全台充電站 #319",
+    "address": "全台充電站 #319",
     "price": "依現場營運公告"
   },
   {
