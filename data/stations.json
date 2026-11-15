@@ -5423,7 +5423,7 @@
     "lng": 121.00881,
     "op": "U-POWER 充電站",
     "operator": "U-POWER 充電站",
-    "type": "CCS1 / CCS2 / TPC",
+    "type": "CCS2",
     "power": "120-360 kW (DC超快充)",
     "addr": "全台充電站 #318",
     "address": "全台充電站 #318",
